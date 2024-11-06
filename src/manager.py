@@ -16,14 +16,23 @@ class Manager:
         self.host = host
 
     def parse(self, package: str, verbose: bool) -> None:
-        if not supports_tar_xz:
-            url = f"{host}packages/{package}.tar"
+        if supports_tar_xz == False:
+            url = f"{self.host}packages/{package}.tar"
         else:
-            url = f"{host}packages/{package}.tar.xz"
+            url = f"{self.host}packages/{package}.tar.xz"
+
+        if verbose:
+            print(f"downloading at '{url}'...")
         
         os.makedirs("installed", exist_ok=True)
         to = os.path.join("installed", f"{package}.tar.xz")
-        urllib.request.urlretrieve(url, to, reporthook=progress_callback) # download
+
+        try:
+            urllib.request.urlretrieve(url, to, reporthook=progress_callback) # download
+        except urllib.error.HTTPError:
+            print(f"package {package} not found")
+            return 1
+        
         if verbose:
             print("downloaded")
 
