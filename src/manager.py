@@ -18,14 +18,16 @@ class Manager:
     def parse(self, package: str, verbose: bool) -> None:
         if supports_tar_xz == False:
             url = f"{self.host}packages/{package}.tar"
+            extension = ".tar"
         else:
             url = f"{self.host}packages/{package}.tar.xz"
+            extension = ".tar.xz"
 
         if verbose:
             print(f"downloading at '{url}'...")
         
         os.makedirs("installed", exist_ok=True)
-        to = os.path.join("installed", f"{package}.tar.xz")
+        to = os.path.join("installed", f"{package}{extension}")
 
         try:
             urllib.request.urlretrieve(url, to, reporthook=progress_callback) # download
@@ -34,9 +36,14 @@ class Manager:
             return 1
         
         if verbose:
-            print("downloaded")
+            print(" - downloaded")
 
-        with tarfile.open(to, "r:xz") as tar:
-            tar.extractall("installed")
-            if verbose:
-                print("extracted")
+        if extension == ".tar.xz": # extracting time..
+            with tarfile.open(to, "r:xz") as tar:
+                tar.extractall("installed")
+        else:
+            with tarfile.open(to, "r:") as tar:
+                tar.extractall("installed")
+
+        if verbose:
+            print("extracted")
