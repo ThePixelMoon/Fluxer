@@ -1,6 +1,7 @@
 {
     "packages": [
-        "pvz-toolkit"
+        "pvz-toolkit",
+        "sudo"
     ]
   }
   
