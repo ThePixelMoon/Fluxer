@@ -19,13 +19,11 @@ def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
             print("\n") # bug fix
             return
 
-def verify_checksum(file_path: str, expected_hash: str) -> bool:
-    checksum = hashlib.md5(open(file_path, "rb").read()).hexdigest()
+def verify_checksum(package_path: str, checksum_file_path: str) -> bool:
+    p_hash = hashlib.md5(open(package_path, "rb").read()).hexdigest()
+    c_hash = open(checksum_file_path, "r").read()
     
-    print(f"calculated: {checksum}")
-    print(f"expected: {expected_hash}")
-    
-    return checksum == expected_hash
+    return p_hash == c_hash
 
 class Manager:
     def __init__(self, host: str) -> None:
@@ -45,7 +43,7 @@ class Manager:
             with tarfile.open(file_path, mode) as tar:
                 tar.extractall("installed")
             if verbose:
-                print(" - done")
+                print("done")
         except (tarfile.TarError, FileNotFoundError) as e:
             print(f"error extracting package '{file_path}': {e}")
 
@@ -83,13 +81,11 @@ class Manager:
 
         if verbose:
             print("done")
-
-        expected_hash = hashlib.md5(open(to, "rb").read()).hexdigest()
-
-        if not verify_checksum(checksum_file, expected_hash):
-            print(f"checksum mismatch for {package}!")
+            
+        if not verify_checksum(to, checksum_file):
+            print(f"checksum mismatch for {open(checksum_file, "rb").read()}!")
             if verbose:
-                print(f"expected: {expected_hash}")
+                print(f"expected: {open(checksum_file, "r").read()}")
             return 1
 
         if verbose:
@@ -97,3 +93,4 @@ class Manager:
 
         self.extract_package(to, verbose)
         os.remove(checksum_file)
+        os.remove(to)
