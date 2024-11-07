@@ -2,7 +2,7 @@
 import argparse as ap
 from manager import *
 
-LINK = "https://raw.githubusercontent.com/ThePixelMoon/Fluxer/refs/heads/main/"
+LINK = "https://raw.githubusercontent.com/ThePixelMoon/Fluxer-PKGs/refs/heads/main/"
 #      ^ the package manager file URL
 
 if __name__ == "__main__":

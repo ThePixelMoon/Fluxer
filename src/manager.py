@@ -71,7 +71,7 @@ class Manager:
 
     def find_package(self, package_name: str) -> None:
         """search for a package and list available options"""
-        search_url = f"{self.host}packages/list.json" # should work
+        search_url = f"{self.host}list.json" # should work
         try:
             response = urllib.request.urlopen(search_url)
             data = json.loads(response.read())
