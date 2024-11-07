@@ -3,26 +3,36 @@ import urllib.request
 import os
 import sys
 import tarfile
-import hashlib # sha-256
+import hashlib
 
 supports_tar_xz = False
 
 def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
     downloaded = block_num * block_size
     if total_size > 0:
-        percent = downloaded * 100 / total_size
+        percent = (downloaded / total_size) * 100
+        percent = min(percent, 100)
         sys.stdout.write(f"\rdownloading.. {percent:.2f}%")
         sys.stdout.flush()
         
-        if percent >= 100:
-            print("\n") # bug fix
+        if percent == 100:
+            print("\n")
+            return
 
 def verify_checksum(file_path: str, expected_hash: str) -> bool:
-    sha256 = hashlib.sha256()
+    """Verify the checksum of the given file against the expected MD5 hash."""
+    md5 = hashlib.md5()
+    
     with open(file_path, "rb") as f:
         for block in iter(lambda: f.read(4096), b""):
-            sha256.update(block)
-    return sha256.hexdigest() == expected_hash
+            md5.update(block)
+    
+    checksum = md5.hexdigest()
+    
+    print(f"calculated: {checksum}")
+    print(f"expected: {expected_hash}")
+    
+    return checksum == expected_hash
 
 class Manager:
     def __init__(self, host: str) -> None:
@@ -66,7 +76,7 @@ class Manager:
         if verbose:
             print("done")
 
-        checksum_file = os.path.join("installed", f"{package}{extension}.sha256")
+        checksum_file = os.path.join("installed", f"{package}{extension}.md5")
         
         if verbose:
             print(f"downloading at {checksum_url}..")
@@ -82,14 +92,16 @@ class Manager:
             print("done")
 
         with open(checksum_file, "r") as f:
-            expected_hash = f.read().strip()
+            expected_hash = f.read().split()[0]
 
-        if not verify_checksum(to, expected_hash):
+        if not verify_checksum(checksum_file, expected_hash):
             print(f"checksum mismatch for {package}!")
+            if verbose:
+                print(f"expected: {expected_hash}")
             return 1
 
         if verbose:
             print("checksum verified")
 
         self.extract_package(to, verbose)
-        os.remove(checksum_file) # cleanup!!
+        os.remove(checksum_file)
