@@ -13,6 +13,9 @@ def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
         percent = downloaded * 100 / total_size
         sys.stdout.write(f"\rdownloading.. {percent:.2f}%")
         sys.stdout.flush()
+        
+        if percent >= 100:
+            print("\n") # bug fix
 
 def verify_checksum(file_path: str, expected_hash: str) -> bool:
     sha256 = hashlib.sha256()
@@ -30,7 +33,8 @@ class Manager:
         return f"{self.host}packages/{package}{extension}", extension
 
     def get_checksum_url(self, package: str) -> str:
-        return f"{self.host}packages/{package}.sha256"
+        extension = ".tar.xz" if supports_tar_xz else ".tar"
+        return f"{self.host}packages/{package}{extension}.sha256"
 
     def extract_package(self, file_path: str, verbose: bool) -> None:
         try:
@@ -47,6 +51,7 @@ class Manager:
         checksum_url = self.get_checksum_url(package)
         
         if verbose:
+            print(f"extension: {extension}")
             print(f"downloading at '{url}'...")
 
         os.makedirs("installed", exist_ok=True)
@@ -59,18 +64,22 @@ class Manager:
             return 1
         
         if verbose:
-            print(" - downloaded")
+            print("done")
 
         checksum_file = os.path.join("installed", f"{package}{extension}.sha256")
+        
+        if verbose:
+            print(f"downloading at {checksum_url}..")
+        
         try:
-            urllib.request.urlretrieve(checksum_url, checksum_file)
+            urllib.request.urlretrieve(checksum_url, checksum_file, reporthook=progress_callback)
         except urllib.error.HTTPError:
             print(f"checksum file for {package} not found")
             os.remove(to)
             return 1
 
         if verbose:
-            print(" - checksum downloaded")
+            print("done")
 
         with open(checksum_file, "r") as f:
             expected_hash = f.read().strip()
@@ -80,7 +89,7 @@ class Manager:
             return 1
 
         if verbose:
-            print(" - checksum verified")
+            print("checksum verified")
 
         self.extract_package(to, verbose)
         os.remove(checksum_file) # cleanup!!
