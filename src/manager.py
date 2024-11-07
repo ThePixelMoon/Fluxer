@@ -64,7 +64,7 @@ class Manager:
             with tarfile.open(file_path, mode) as tar:
                 tar.extractall("installed")
             
-            verbose_print("{Colors.GREEN}done{Colors.RESET}", verbose)
+            verbose_print(f"{Colors.GREEN}done{Colors.RESET}", verbose)
             
         except (tarfile.TarError, FileNotFoundError) as e:
             print(f"error extracting package '{file_path}': {e}")
