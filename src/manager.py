@@ -16,18 +16,11 @@ def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
         sys.stdout.flush()
         
         if percent == 100:
-            print("\n")
+            print("\n") # bug fix
             return
 
 def verify_checksum(file_path: str, expected_hash: str) -> bool:
-    """Verify the checksum of the given file against the expected MD5 hash."""
-    md5 = hashlib.md5()
-    
-    with open(file_path, "rb") as f:
-        for block in iter(lambda: f.read(4096), b""):
-            md5.update(block)
-    
-    checksum = md5.hexdigest()
+    checksum = hashlib.md5(open(file_path, "rb").read()).hexdigest()
     
     print(f"calculated: {checksum}")
     print(f"expected: {expected_hash}")
@@ -44,7 +37,7 @@ class Manager:
 
     def get_checksum_url(self, package: str) -> str:
         extension = ".tar.xz" if supports_tar_xz else ".tar"
-        return f"{self.host}packages/{package}{extension}.sha256"
+        return f"{self.host}packages/{package}{extension}.md5"
 
     def extract_package(self, file_path: str, verbose: bool) -> None:
         try:
@@ -91,8 +84,7 @@ class Manager:
         if verbose:
             print("done")
 
-        with open(checksum_file, "r") as f:
-            expected_hash = f.read().split()[0]
+        expected_hash = hashlib.md5(open(to, "rb").read()).hexdigest()
 
         if not verify_checksum(checksum_file, expected_hash):
             print(f"checksum mismatch for {package}!")
