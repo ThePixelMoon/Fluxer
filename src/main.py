@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse as ap
 from manager import *
+
 LINK = "https://raw.githubusercontent.com/ThePixelMoon/Fluxer/refs/heads/main/" # the package manager files because yes
 
 if __name__ == "__main__":
