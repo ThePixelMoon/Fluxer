@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-from colors import Colors
 import urllib.request
 import os
 import sys
 import json
 import tarfile
 import hashlib
+from colors import Colors
 
-supports_tar_xz = False
+SUPPORTS_TAR_XZ = False
+
+def verbose_print(text: str, verbose: bool) -> str:
+    """if verbose then print"""
+    if verbose:
+        print(f"[VERBOSE] {text}")
+    return text
 
 def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
     """progress bar"""
@@ -24,25 +30,30 @@ def progress_callback(block_num: int, block_size: int, total_size: int) -> None:
 
 def verify_checksum(package_path: str, checksum_file_path: str) -> bool:
     """just compare 2 hashes, duh"""
-    p_hash = hashlib.md5(open(package_path, "rb").read()).hexdigest()
-    c_hash = open(checksum_file_path, "r").read()
+    with open(package_path, "rb") as f:
+        p_hash = hashlib.sha256(f.read()).hexdigest()
+
+
+    with open(checksum_file_path, "r", encoding="utf-8") as f:
+        c_hash = f.read()
     
     return p_hash == c_hash
 
 class Manager:
+    """the manager(tm)"""
     def __init__(self, host: str) -> None:
         """..."""
         self.host = host
         
     def get_package_url(self, package: str) -> tuple[str, str]:
         """gets a package link"""
-        extension = ".tar.xz" if supports_tar_xz else ".tar"
+        extension = ".tar.xz" if SUPPORTS_TAR_XZ else ".tar"
         return f"{self.host}packages/{package}{extension}", extension
 
     def get_checksum_url(self, package: str) -> str:
-        """gets a .md5 file link"""
-        extension = ".tar.xz" if supports_tar_xz else ".tar"
-        return f"{self.host}packages/{package}{extension}.md5"
+        """gets a .sha256 file link"""
+        extension = ".tar.xz" if SUPPORTS_TAR_XZ else ".tar"
+        return f"{self.host}packages/{package}{extension}.sha256"
 
     def extract_package(self, file_path: str, verbose: bool) -> None:
         """literally extracts the downloaded archive"""
@@ -53,7 +64,7 @@ class Manager:
             with tarfile.open(file_path, mode) as tar:
                 tar.extractall("installed")
             
-            if verbose: print(f"{Colors.GREEN}done{Colors.RESET}")
+            verbose_print("{Colors.GREEN}done{Colors.RESET}", verbose)
             
         except (tarfile.TarError, FileNotFoundError) as e:
             print(f"error extracting package '{file_path}': {e}")
@@ -81,7 +92,7 @@ class Manager:
         """downloads a file from the given URL to the specified destination"""
         try:
             urllib.request.urlretrieve(url, dest, reporthook=progress_callback)
-            if verbose: print(f"{Colors.GREEN}done{Colors.RESET}")
+            verbose_print(f"{Colors.GREEN}done{Colors.RESET}", verbose)
         except urllib.error.HTTPError:
             print(f"{Colors.RED}error downloading '{url}'{Colors.RESET}")
             raise
@@ -91,7 +102,7 @@ class Manager:
         url, extension = self.get_package_url(package)
         package_path = os.path.join("installed", f"{package}{extension}")
         
-        if verbose: print(f"{Colors.CYAN}downloading package from {url}...{Colors.RESET}")
+        verbose_print(f"{Colors.CYAN}downloading package from {url}...{Colors.RESET}", verbose)
 
         self.download_file(url, package_path, verbose)
         return package_path
@@ -99,9 +110,9 @@ class Manager:
     def download_checksum(self, package: str, verbose: bool) -> str:
         """downloads the checksum file for the package"""
         checksum_url = self.get_checksum_url(package)
-        checksum_path = os.path.join("installed", f"{package}.md5")
+        checksum_path = os.path.join("installed", f"{package}.sha256")
         
-        if verbose: print(f"{Colors.CYAN}downloading checksum from {checksum_url}...{Colors.RESET}")
+        verbose_print(f"{Colors.CYAN}downloading checksum from {checksum_url}...{Colors.RESET}", verbose)
 
         self.download_file(checksum_url, checksum_path, verbose)
         return checksum_path
@@ -110,9 +121,8 @@ class Manager:
         """verifies checksum and removes files if mismatch"""
         if not verify_checksum(package_path, checksum_path):
             print(f"{Colors.RED}checksum mismatch{Colors.RESET}")
-            if verbose:
-                with open(checksum_path, 'r') as f:
-                    print(f"expected: {f.read()}")
+            with open(checksum_path, 'r', encoding='utf-8') as f:
+                verbose_print(f"expected: {f.read()}", verbose)
                 
             os.remove(package_path)
             os.remove(checksum_path)
@@ -120,7 +130,7 @@ class Manager:
             
             return False
 
-        if verbose: print(f"{Colors.GREEN}checksum verified{Colors.RESET}")
+        verbose_print(f"{Colors.GREEN}checksum verified{Colors.RESET}", verbose)
         
         return True
 
@@ -137,10 +147,6 @@ class Manager:
                 return 1
             
             self.extract_package(package_path, verbose)
-        
-        except Exception as e:
-            print(f"{Colors.RED}error: {e}{Colors.RESET}")
-            return 1
         
         finally:
             # finally clean up files
